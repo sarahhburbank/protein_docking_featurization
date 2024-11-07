@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/Users/sarahburbank/Desktop/iw/pdb_analysis/ftr/ml_analysis/ml_analysis.py", line 256, in <module>
+    rfr_classifier_wandb(data)
+  File "/Users/sarahburbank/Desktop/iw/pdb_analysis/ftr/ml_analysis/ml_analysis.py", line 122, in rfr_classifier_wandb
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+NameError: name 'X' is not defined

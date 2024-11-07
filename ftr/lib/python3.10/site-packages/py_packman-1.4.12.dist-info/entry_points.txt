@@ -1,0 +1,2 @@
+[console_scripts]
+packman = packman.bin.PACKMAN:main
