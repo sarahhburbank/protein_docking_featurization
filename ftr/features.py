@@ -1,5 +1,4 @@
-import Bio
-from Bio.PDB import PDBParser, Selection, NeighborSearch
+from Bio.PDB import PDBParser, NeighborSearch
 import subprocess
 from Bio.PDB.PDBParser import PDBParser
 from Bio import Entrez
@@ -8,22 +7,18 @@ import os
 import numpy as np
 import pandas as pd
 import urllib
-# Create a PDBParser object
+import csv
+
 parser = PDBParser()
 Entrez.email = "sb9342@princeton.edu"
-#kingdom id or 0 if synthetic
 
 #can return eukaryota, viruses, synthetic, bacteria, other, unclassified"
 def origin_features(id):
     #get correct type of pdb#
     #new 
     url = f'https://files.rcsb.org/download/{id}.pdb'
-  # Modify this URL pattern according to your setup
     with urllib.request.urlopen(url) as response:
-        pdb_data = response.read().decode('utf-8')  # Read PDB file data
-    
-    #end new
-    
+        pdb_data = response.read().decode('utf-8')    
     try:
         lines = pdb_data.split('\n')
         tax_ids = set()
@@ -54,16 +49,12 @@ def origin_features(id):
             kingdoms.add('other') 
     except:
         return 0,0        
-    #print("tax ids",tax_ids)
-    #print("kingdoms", kingdoms)
-    #print(f'{name} is synth', synthetic)
     return kingdoms, synthetic, 
 
 
 
 # Parse the PDB file
 def size_features(file_name):
-    #try: 
     structure = parser.get_structure(file_name, f'/Users/sarahburbank/Desktop/iw/abag/{file_name}')
     
     #----------------size variables--------------------#
@@ -103,17 +94,9 @@ def size_features(file_name):
             else:
                 residue_counts[residue_name] = 1'''
         residue_sizes.append(tot_residues)
-        #print("res for chain", res_chain) # this can be used better
-                    
-        #print("residue information", residue_counts)
-        #print("total chains", total_chains)
         unique_chains = len(chain_ids)
-        #print("unique chains", unique_chains)
         std_dev_res_chain = np.std(residue_sizes)
-        #function
-    #except:
-    #    return 0,0,0,0,0,0
-    return num_atoms, residue_counts, unique_chains, total_chains, std_dev_res_chain #atomic_weight
+    return num_atoms, residue_counts, unique_chains, total_chains, std_dev_res_chain 
     
     # Access information about the structure
 def chemical(name):
@@ -136,14 +119,7 @@ def two_proteins(filename_1, filename_2, id ):
     #-----------------------size features------------------------#
     num_atoms1, residue_counts1, unique_chains1, total_chains1, std_dev1 = size_features(filename_1)
     num_atoms2, residue_counts2, unique_chains2, total_chains2, std_dev2 = size_features(filename_2)
-    
-    #weightratio1 = atomic_weight1 / atomic_weight2
-    #weightratio2 = atomic_weight2 /atomic_weight1
-    '''if weightratio1 > weightratio2:
-        at_ratio_w = weightratio1
-    else:
-        at_ratio_w = weightratio2'''
-    
+        
     ratio1 = num_atoms1 / num_atoms2
     ratio2 = num_atoms2 /num_atoms1
     if ratio1 > ratio2:
@@ -186,7 +162,6 @@ def two_proteins(filename_1, filename_2, id ):
             print("returned 0,0")
             
     
-        #print("king2",king2)
     #----------------------- feature row ------------------------#
     #can include residue counts later if necessary
     #feature order:
@@ -204,11 +179,9 @@ def make_tensor_single():
         print(pdbfile)
         num_atoms, residue_counts, unique_chains, total_chains, std_dev_res_chain,  = size_features(pdbfile)
         kingdoms, synthetic,  = origin_features(pdbfile)
-        row = [pdbfile, kingdoms,  synthetic, num_atoms, residue_counts, unique_chains, total_chains, std_dev_res_chain, atomic_weight ]
+        row = [pdbfile, kingdoms,  synthetic, num_atoms, residue_counts, unique_chains, total_chains, std_dev_res_chain ]
         with open('/Users/sarahburbank/Desktop/iw/pdb_analysis/ftr/result.csv', 'a', newline='') as file:
             writer = csv.writer(file)
-    
-        # Write the row to the CSV file
             writer.writerow(row)
 
 import re
@@ -242,22 +215,22 @@ def hinge(ligand_file_name):
 def many_hinge():
     #code input :packman hinge 2.8 aq_4aqn.pdb1_0.dill_l_b.pdb --pdbid 4aqn --e_clusters 4 --minhnglen 5
     #hing count 0
-    #hand writtin input packman hinge 2.8 aq_4aqn.pdb --pdbid 4aqn --e_clusters 4 --minhnglen 5
+    #hand written input packman hinge 2.8 aq_4aqn.pdb --pdbid 4aqn --e_clusters 4 --minhnglen 5
     all_crmsd_df = pd.read_csv('/Users/sarahburbank/Desktop/iw/pdb_analysis/ftr/all_crmsd.csv',header=0, names=['ligand', 'receptor', 'crmsd'])
 
     for row in all_crmsd_df.itertuples():
         ligand_file_name = row[1]
         # example dips aq_4aqn.pdb1_0.dill_l_b.pdb
         if ligand_file_name[2] == '_':#dips 
-            parts = ligand_file_name.split("_")  # Split the string by "_"
-            id = parts[1].split(".")[0] #gives 4aqn
+            parts = ligand_file_name.split("_") 
+            id = parts[1].split(".")[0] 
             pdb_file_hinge_parts =  ligand_file_name.split(".")
             pdb_file_name = pdb_file_hinge_parts[1] #gives aq_4aqn
 
         elif ligand_file_name[4]== '_':#db5
-            parts = ligand_file_name.split("_")  # Split the string by "_"
+            parts = ligand_file_name.split("_")
             id = parts[0]
-            pdb_file_name = id #might be wrong 
+            pdb_file_name = id 
             
         hinge(id, pdb_file_name)
          
@@ -284,17 +257,13 @@ def make_two_protein_tensor():
             print("id", id)
         else: print(f"FILE NAME ERROR FOR {ligand_file_name}")
         hinge_count= hinge(ligand_file_name)
-        #atomic_weight1, atomic_weight2, at_ratio_w,
         king1, synth1_num, num_atoms1, num_atoms2, at_ratio,  unique_chains1, unique_chains2, total_chains1, total_chains2,chain_ratio, std_dev1, std_dev2 = two_proteins(ligand_file_name, receptor_file_name,id )
         row = [id, crmsd, hinge_count, king1, synth1_num, num_atoms1, num_atoms2, at_ratio,  unique_chains1, unique_chains2,  chain_ratio, std_dev1, std_dev2]
         with open('/Users/sarahburbank/Desktop/iw/pdb_analysis/ftr/abag_features.csv', 'a', newline='') as file:
             writer = csv.writer(file)
-    
-        # Write the row to the CSV file
             writer.writerow(row)
 
 
-import csv
 
 def calculate_disulfide_ratio(pdb_filename):
     parser = PDBParser()
@@ -323,7 +292,7 @@ with open(csv_filename, 'r') as csvfile,  open(output_csv_filename, 'w', newline
     csvwriter = csv.writer(outfile)
 
     for index, row in enumerate(csvreader):
-        ligand = row[0]  # Assuming the file names are in the first column
+        ligand = row[0]
         id = ligand[:4]
         print(id)
         if os.path.exists(f'/Users/sarahburbank/Desktop/iw/all_proteins/{id}_r_u.pdb'):
@@ -333,8 +302,4 @@ with open(csv_filename, 'r') as csvfile,  open(output_csv_filename, 'w', newline
         ratio1 = calculate_disulfide_ratio(pdb)
         print(ratio1)
         row1 = [f'{id}', ratio1]
-        # Append the ratio to the current row
-        # Append the ratio to the current row
-
-        # Write the updated row to the output CSV
         csvwriter.writerow(row1)
